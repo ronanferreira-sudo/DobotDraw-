@@ -1,8 +1,9 @@
 import asyncio
+import json
 import logging
 import threading
 import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox
+from tkinter import ttk, scrolledtext, messagebox, filedialog
 
 from dobot import Robot
 
@@ -16,10 +17,11 @@ class DobotInterface:
         self.loop = None
         self.thread = None
         self.running = False
+        self.saved_points = []
 
         self.root = tk.Tk()
         self.root.title("DobotDraw - Interface")
-        self.root.geometry("500x600")
+        self.root.geometry("520x780")
         self.root.resizable(False, False)
 
         self._build_ui()
@@ -36,6 +38,73 @@ class DobotInterface:
 
         self.btn_connect = ttk.Button(frame_status, text="Conectar", command=self._toggle_connection)
         self.btn_connect.pack(side="right", padx=10, pady=5)
+
+        frame_manual = ttk.LabelFrame(self.root, text="Controle Manual")
+        frame_manual.pack(fill="x", padx=10, pady=5)
+
+        frame_step = ttk.Frame(frame_manual)
+        frame_step.pack(fill="x", padx=5, pady=5)
+
+        ttk.Label(frame_step, text="Passo (mm):").pack(side="left")
+        self.entry_step = ttk.Entry(frame_step, width=8)
+        self.entry_step.insert(0, "10")
+        self.entry_step.pack(side="left", padx=5)
+
+        ttk.Button(frame_step, text="Ler Pose", command=self._read_pose).pack(side="right", padx=5)
+
+        frame_jog = ttk.Frame(frame_manual)
+        frame_jog.pack(fill="x", padx=5, pady=5)
+
+        ttk.Button(frame_jog, text="+X", command=lambda: self._jog("x", 1)).grid(row=0, column=1, padx=2, pady=2)
+        ttk.Button(frame_jog, text="-X", command=lambda: self._jog("x", -1)).grid(row=0, column=3, padx=2, pady=2)
+        ttk.Button(frame_jog, text="+Y", command=lambda: self._jog("y", 1)).grid(row=1, column=0, padx=2, pady=2)
+        ttk.Button(frame_jog, text="-Y", command=lambda: self._jog("y", -1)).grid(row=1, column=4, padx=2, pady=2)
+        ttk.Button(frame_jog, text="+Z", command=lambda: self._jog("z", 1)).grid(row=2, column=1, padx=2, pady=2)
+        ttk.Button(frame_jog, text="-Z", command=lambda: self._jog("z", -1)).grid(row=2, column=3, padx=2, pady=2)
+        ttk.Button(frame_jog, text="+R", command=lambda: self._jog("r", 1)).grid(row=3, column=1, padx=2, pady=2)
+        ttk.Button(frame_jog, text="-R", command=lambda: self._jog("r", -1)).grid(row=3, column=3, padx=2, pady=2)
+
+        frame_tools = ttk.Frame(frame_manual)
+        frame_tools.pack(fill="x", padx=5, pady=5)
+
+        ttk.Button(frame_tools, text="Abrir Garra", command=lambda: self._run(self.robot.tool.gripper(False))).pack(
+            side="left", expand=True, fill="x", padx=2
+        )
+        ttk.Button(frame_tools, text="Fechar Garra", command=lambda: self._run(self.robot.tool.gripper(True))).pack(
+            side="left", expand=True, fill="x", padx=2
+        )
+        ttk.Button(frame_tools, text="Succao ON", command=lambda: self._run(self.robot.tool.suction(True))).pack(
+            side="left", expand=True, fill="x", padx=2
+        )
+        ttk.Button(frame_tools, text="Sucao OFF", command=lambda: self._run(self.robot.tool.suction(False))).pack(
+            side="left", expand=True, fill="x", padx=2
+        )
+
+        frame_save = ttk.Frame(frame_manual)
+        frame_save.pack(fill="x", padx=5, pady=5)
+
+        ttk.Button(frame_save, text="Salvar Coordenada", command=self._save_point).pack(
+            side="left", expand=True, fill="x", padx=2
+        )
+        ttk.Button(frame_save, text="Exportar JSON", command=self._export_points).pack(
+            side="left", expand=True, fill="x", padx=2
+        )
+        ttk.Button(frame_save, text="Limpar", command=self._clear_points).pack(
+            side="left", expand=True, fill="x", padx=2
+        )
+
+        frame_list = ttk.Frame(frame_manual)
+        frame_list.pack(fill="both", expand=True, padx=5, pady=5)
+
+        self.list_points = tk.Listbox(frame_list, height=5)
+        self.list_points.pack(side="left", fill="both", expand=True)
+
+        scrollbar = ttk.Scrollbar(frame_list, orient="vertical", command=self.list_points.yview)
+        scrollbar.pack(side="right", fill="y")
+        self.list_points.config(yscrollcommand=scrollbar.set)
+
+        self.lbl_pose = ttk.Label(frame_manual, text="Pose: --")
+        self.lbl_pose.pack(padx=5, pady=2)
 
         frame_motion = ttk.LabelFrame(self.root, text="Movimento")
         frame_motion.pack(fill="x", padx=10, pady=5)
@@ -112,7 +181,7 @@ class DobotInterface:
         frame_log = ttk.LabelFrame(self.root, text="Log")
         frame_log.pack(fill="both", expand=True, padx=10, pady=5)
 
-        self.txt_log = scrolledtext.ScrolledText(frame_log, height=8, state="disabled")
+        self.txt_log = scrolledtext.ScrolledText(frame_log, height=6, state="disabled")
         self.txt_log.pack(fill="both", expand=True, padx=5, pady=5)
 
     def _log(self, msg):
@@ -169,6 +238,66 @@ class DobotInterface:
             self.robot = None
             self.lbl_status.config(text="Desconectado", foreground="red")
             self.btn_connect.config(text="Conectar")
+
+    def _jog(self, axis, direction):
+        try:
+            step = float(self.entry_step.get())
+        except ValueError:
+            messagebox.showerror("Erro", "Passo deve ser numerico")
+            return
+
+        self._run(self.robot.motion.movj(
+            x=step if axis == "x" else 0,
+            y=step if axis == "y" else 0,
+            z=step if axis == "z" else 0,
+            r=step if axis == "r" else 0,
+        ))
+
+    def _read_pose(self):
+        self._run(self._async_read_pose())
+
+    async def _async_read_pose(self):
+        try:
+            pose = await self.robot.dashboard.get_pose()
+            self.lbl_pose.config(text=f"Pose: {pose}")
+            self._log(f"Pose: {pose}")
+        except Exception as e:
+            self._log(f"[ERRO] {e}")
+
+    def _save_point(self):
+        self._run(self._async_save_point())
+
+    async def _async_save_point(self):
+        try:
+            pose = await self.robot.dashboard.get_pose()
+            self.saved_points.append(pose)
+            self.list_points.insert("end", str(pose))
+            self._log(f"Salvo: {pose}")
+        except Exception as e:
+            self._log(f"[ERRO] {e}")
+
+    def _export_points(self):
+        if not self.saved_points:
+            messagebox.showinfo("Info", "Nenhuma coordenada salva")
+            return
+
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".json",
+            filetypes=[("JSON", "*.json"), ("Todos", "*.*")],
+            title="Exportar coordenadas"
+        )
+        if file_path:
+            try:
+                with open(file_path, "w") as f:
+                    json.dump(self.saved_points, f, indent=2)
+                self._log(f"Exportado: {file_path}")
+            except Exception as e:
+                self._log(f"[ERRO] {e}")
+
+    def _clear_points(self):
+        self.saved_points.clear()
+        self.list_points.delete(0, "end")
+        self._log("Coordenadas limpas")
 
     def _start_canvas(self):
         self._run(self.robot.canvas.start(speed=100, acceleration=100))

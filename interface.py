@@ -21,16 +21,37 @@ class DobotInterface:
 
         self.root = tk.Tk()
         self.root.title("DobotDraw - Interface")
-        self.root.geometry("520x780")
-        self.root.resizable(False, False)
+        self.root.geometry("520x700")
+        self.root.minsize(520, 500)
+        self.root.resizable(True, True)
 
         self._build_ui()
 
     def _build_ui(self):
+        canvas = tk.Canvas(self.root)
+        scrollbar = ttk.Scrollbar(self.root, orient="vertical", command=canvas.yview)
+        self.scrollable_frame = ttk.Frame(canvas)
+
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        self._build_content()
+
+        canvas.bind_all("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
+
+    def _build_content(self):
         style = ttk.Style()
         style.theme_use("clam")
 
-        frame_status = ttk.LabelFrame(self.root, text="Conexao")
+        frame_status = ttk.LabelFrame(self.scrollable_frame, text="Conexao")
         frame_status.pack(fill="x", padx=10, pady=5)
 
         self.lbl_status = ttk.Label(frame_status, text="Desconectado", foreground="red")
@@ -39,7 +60,7 @@ class DobotInterface:
         self.btn_connect = ttk.Button(frame_status, text="Conectar", command=self._toggle_connection)
         self.btn_connect.pack(side="right", padx=10, pady=5)
 
-        frame_manual = ttk.LabelFrame(self.root, text="Controle Manual")
+        frame_manual = ttk.LabelFrame(self.scrollable_frame, text="Controle Manual")
         frame_manual.pack(fill="x", padx=10, pady=5)
 
         frame_step = ttk.Frame(frame_manual)
@@ -73,7 +94,7 @@ class DobotInterface:
         ttk.Button(frame_tools, text="Fechar Garra", command=lambda: self._run(self.robot.tool.gripper(True))).pack(
             side="left", expand=True, fill="x", padx=2
         )
-        ttk.Button(frame_tools, text="Succao ON", command=lambda: self._run(self.robot.tool.suction(True))).pack(
+        ttk.Button(frame_tools, text="Sucao ON", command=lambda: self._run(self.robot.tool.suction(True))).pack(
             side="left", expand=True, fill="x", padx=2
         )
         ttk.Button(frame_tools, text="Sucao OFF", command=lambda: self._run(self.robot.tool.suction(False))).pack(
@@ -99,14 +120,14 @@ class DobotInterface:
         self.list_points = tk.Listbox(frame_list, height=5)
         self.list_points.pack(side="left", fill="both", expand=True)
 
-        scrollbar = ttk.Scrollbar(frame_list, orient="vertical", command=self.list_points.yview)
-        scrollbar.pack(side="right", fill="y")
-        self.list_points.config(yscrollcommand=scrollbar.set)
+        scrollbar_points = ttk.Scrollbar(frame_list, orient="vertical", command=self.list_points.yview)
+        scrollbar_points.pack(side="right", fill="y")
+        self.list_points.config(yscrollcommand=scrollbar_points.set)
 
         self.lbl_pose = ttk.Label(frame_manual, text="Pose: --")
         self.lbl_pose.pack(padx=5, pady=2)
 
-        frame_motion = ttk.LabelFrame(self.root, text="Movimento")
+        frame_motion = ttk.LabelFrame(self.scrollable_frame, text="Movimento")
         frame_motion.pack(fill="x", padx=10, pady=5)
 
         ttk.Button(frame_motion, text="Home", command=lambda: self._run(self.robot.motion.home())).pack(
@@ -116,7 +137,7 @@ class DobotInterface:
             side="left", expand=True, fill="x", padx=5, pady=5
         )
 
-        frame_canvas = ttk.LabelFrame(self.root, text="Desenho Continuo")
+        frame_canvas = ttk.LabelFrame(self.scrollable_frame, text="Desenho Continuo")
         frame_canvas.pack(fill="x", padx=10, pady=5)
 
         frame_cmd = ttk.Frame(frame_canvas)
@@ -155,7 +176,7 @@ class DobotInterface:
             side="left", expand=True, fill="x", padx=2
         )
 
-        frame_shapes = ttk.LabelFrame(self.root, text="Formas")
+        frame_shapes = ttk.LabelFrame(self.scrollable_frame, text="Formas")
         frame_shapes.pack(fill="x", padx=10, pady=5)
 
         ttk.Button(frame_shapes, text="Quadrado 50mm", command=self._square).pack(
@@ -165,7 +186,7 @@ class DobotInterface:
             fill="x", padx=10, pady=3
         )
 
-        frame_io = ttk.LabelFrame(self.root, text="IO")
+        frame_io = ttk.LabelFrame(self.scrollable_frame, text="IO")
         frame_io.pack(fill="x", padx=10, pady=5)
 
         frame_io_buttons = ttk.Frame(frame_io)
@@ -178,10 +199,10 @@ class DobotInterface:
             side="left", expand=True, fill="x", padx=2
         )
 
-        frame_log = ttk.LabelFrame(self.root, text="Log")
+        frame_log = ttk.LabelFrame(self.scrollable_frame, text="Log")
         frame_log.pack(fill="both", expand=True, padx=10, pady=5)
 
-        self.txt_log = scrolledtext.ScrolledText(frame_log, height=6, state="disabled")
+        self.txt_log = scrolledtext.ScrolledText(frame_log, height=8, state="disabled")
         self.txt_log.pack(fill="both", expand=True, padx=5, pady=5)
 
     def _log(self, msg):

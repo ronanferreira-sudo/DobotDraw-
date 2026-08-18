@@ -8,6 +8,26 @@ Async Python client for Dobot robotic arms (Magician Lite) via JSON-RPC 2.0 over
 pip install -e .
 ```
 
+## Server Setup
+
+Esta biblioteca é um **cliente**. Ela se conecta a um servidor RPC rodando em `127.0.0.1:9090`.
+
+### Opção 1: Usar o software oficial da Dobot
+1. Instale o **Dobot Studio** ou **Dobot EDU** da Dobot
+2. Conecte o Dobot Magician Lite via USB
+3. Inicie o servidor RPC dentro do software (geralmente em `127.0.0.1:9090`)
+
+### Opção 2: Servidor RPC standalone
+Se você tem o executável/servidor RPC separado:
+1. Conecte o Dobot via USB ou rede
+2. Execute o servidor RPC apontando para a porta 9090
+3. Verifique se está acessível em `http://127.0.0.1:9090`
+
+### Verificar conexão
+```bash
+python -c "from dobot.rpc import RPCClient; import asyncio; c = RPCClient(); asyncio.get_event_loop().run_until_complete(c.connect()); print('Conectado!'); asyncio.get_event_loop().run_until_complete(c.disconnect())"
+```
+
 ## Usage
 
 ```python

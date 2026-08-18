@@ -113,6 +113,28 @@ async with Robot(host="127.0.0.1", port=9090, max_retries=3) as robot:
     await robot.tool.laser(enable=True)
 ```
 
+## GUI
+
+Interface gráfica para controle manual do robô:
+
+```bash
+dobotdraw-gui
+```
+
+Ou execute diretamente:
+
+```bash
+python interface.py
+```
+
+### Funcionalidades da interface
+- **Conectar/Desconectar** — Botão para conectar ao robô
+- **Movimento** — Botão Home e Parar Fila
+- **Desenho Contínuo** — Iniciar/Parar CP e enviar linhas com coordenadas X/Y/Z/R
+- **Formas** — Desenhar quadrado e círculo pré-configurados
+- **IO** — Ligar/Desligar saída digital 0
+- **Log** — Área de texto com mensagens de status e erros
+
 ## Requirements
 
 - Python 3.11+

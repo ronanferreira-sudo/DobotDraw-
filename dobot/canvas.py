@@ -1,4 +1,6 @@
+import asyncio
 import logging
+
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -7,7 +9,7 @@ logger = logging.getLogger(__name__)
 class Canvas:
     """Desenho contínuo (Continuous Path) para movimentos suaves."""
 
-    def __init__(self, robot: Any) -> None:
+    def __init__(self, robot):
         self.robot = robot
         self._active = False
 

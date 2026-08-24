@@ -1,6 +1,6 @@
 # DobotDraw
 
-Async Python client for Dobot robotic arms (Magician Lite) via JSON-RPC 2.0 over WebSocket.
+Async Python client for Dobot robotic arms (Magician Lite) via **direct USB serial** or WebSocket.
 
 ## Installation
 
@@ -8,25 +8,40 @@ Async Python client for Dobot robotic arms (Magician Lite) via JSON-RPC 2.0 over
 pip install -e .
 ```
 
-## Server Setup
+## Connection Modes
 
-Esta biblioteca é um **cliente**. Ela se conecta a um servidor RPC rodando em `127.0.0.1:9090`.
+### Modo 1: USB Direto (recomendado)
 
-### Opção 1: Usar o software oficial da Dobot
+Conecte o Magician Lite diretamente via USB, sem precisar do Dobot Studio/Lab:
+
+```python
+from dobot import Robot
+
+# Auto-detectar porta automaticamente
+async with Robot(mode="usb", serial_port="auto") as robot:
+    await robot.motion.home()
+    await robot.canvas.start(speed=100, acceleration=100)
+    await robot.canvas.line(200, 0, 0, 0)
+    await robot.canvas.stop()
+
+# Ou especificar a porta manualmente
+async with Robot(mode="usb", serial_port="COM3") as robot:
+    await robot.motion.home()
+```
+
+**Requisitos para modo USB:**
+- Driver USB-Serial instalado (Silabs CP210x)
+- Cabo USB conectado ao Magician Lite
+- Porta serial correta (ex: `COM3` no Windows, `/dev/ttyUSB0` no Linux)
+
+**Auto-detecção:**
+- Use `serial_port="auto"` para detectar automaticamente a porta do Dobot
+
+### Modo 2: WebSocket (DobotLab / Dobot Studio)
+
 1. Instale o **Dobot Studio** ou **Dobot EDU** da Dobot
 2. Conecte o Dobot Magician Lite via USB
 3. Inicie o servidor RPC dentro do software (geralmente em `127.0.0.1:9090`)
-
-### Opção 2: Servidor RPC standalone
-Se você tem o executável/servidor RPC separado:
-1. Conecte o Dobot via USB ou rede
-2. Execute o servidor RPC apontando para a porta 9090
-3. Verifique se está acessível em `http://127.0.0.1:9090`
-
-### Verificar conexão
-```bash
-python -c "from dobot.rpc import RPCClient; import asyncio; c = RPCClient(); asyncio.get_event_loop().run_until_complete(c.connect()); print('Conectado!'); asyncio.get_event_loop().run_until_complete(c.disconnect())"
-```
 
 ## Usage
 
@@ -48,6 +63,8 @@ asyncio.run(main())
 ## Features
 
 - **Async API** — Full asyncio support with context manager
+- **Direct USB** — No Dobot Studio/Lab required (uses pydobot)
+- **WebSocket** — Also supports DobotLab RPC server
 - **Robust connection** — Auto-reconnect with exponential backoff
 - **Continuous path drawing** — Smooth line and arc movements via Canvas
 - **Shape helpers** — Draw squares and circles with Drawer
@@ -72,47 +89,6 @@ dobotdraw circle --radius 30
 dobotdraw status
 ```
 
-## API Reference
-
-### Robot
-
-```python
-from dobot import Robot
-
-async with Robot(host="127.0.0.1", port=9090, max_retries=3) as robot:
-    # Motion
-    await robot.motion.home()
-    await robot.motion.movj(200, 0, 0, r=0)
-    await robot.motion.movl(200, 100, 0, r=0)
-
-    # Canvas (continuous path)
-    await robot.canvas.start(speed=100, acceleration=100)
-    await robot.canvas.line(200, 0, 0, 0)
-    await robot.canvas.arc(200, 100, 0, r=0)
-    await robot.canvas.stop()
-
-    # Drawer (shapes)
-    await robot.drawer.draw_square(100, 100, 50, z=0)
-    await robot.drawer.draw_circle(200, 200, 30, z=0)
-
-    # IO
-    await robot.io.do(0, 1)
-    await robot.io.pwm(1, 1000, 50)
-
-    # Dashboard
-    await robot.dashboard.get_pose()
-    await robot.dashboard.get_alarm()
-    await robot.dashboard.get_version()
-
-    # Queue
-    await robot.queue.wait_for_queue(timeout=60)
-
-    # End effector
-    await robot.tool.suction(enable=True)
-    await robot.tool.gripper(enable=True)
-    await robot.tool.laser(enable=True)
-```
-
 ## GUI
 
 Interface gráfica para controle manual do robô:
@@ -127,15 +103,31 @@ Ou execute diretamente:
 python interface.py
 ```
 
-### Funcionalidades da interface
-- **Conectar/Desconectar** — Botão para conectar ao robô
-- **Movimento** — Botão Home e Parar Fila
-- **Desenho Contínuo** — Iniciar/Parar CP e enviar linhas com coordenadas X/Y/Z/R
-- **Formas** — Desenhar quadrado e círculo pré-configurados
-- **IO** — Ligar/Desligar saída digital 0
-- **Log** — Área de texto com mensagens de status e erros
+## API Reference
+
+```python
+from dobot import Robot
+
+# USB mode (default, no DobotLab needed)
+async with Robot(mode="usb", serial_port="auto") as robot:
+    # Motion
+    await robot.motion.home()
+    await robot.motion.movj(200, 0, 0, r=0)
+
+    # Canvas (continuous path)
+    await robot.canvas.start(speed=100, acceleration=100)
+    await robot.canvas.line(200, 0, 0, 0)
+    await robot.canvas.stop()
+
+    # IO
+    await robot.io.do(0, 1)
+
+    # Dashboard
+    await robot.dashboard.get_pose()
+```
 
 ## Requirements
 
 - Python 3.11+
-- Dobot RPC server running at `127.0.0.1:9090`
+- Para modo USB: Driver USB-Serial + cabo USB
+- Para modo WebSocket: Dobot RPC server em `127.0.0.1:9090`

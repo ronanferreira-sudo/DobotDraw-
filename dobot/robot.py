@@ -9,6 +9,7 @@ from .end_effector import EndEffector
 from .io import IO
 from .motion import Motion
 from .queue import Queue
+from .usb_client import USBClient
 
 logger = logging.getLogger(__name__)
 
@@ -16,8 +17,38 @@ logger = logging.getLogger(__name__)
 class Robot:
     """Interface principal para controle do robô Dobot."""
 
-    def __init__(self, host: str = "127.0.0.1", port: int = 9090, max_retries: int = 3):
-        self.client = DobotClient(host, port, max_retries=max_retries)
+    def __init__(
+        self,
+        host: str = "127.0.0.1",
+        port: int = 9090,
+        mode: str = "websocket",
+        serial_port: str | None = None,
+        max_retries: int = 3,
+    ):
+        self.mode = mode.lower()
+        if self.mode == "usb":
+            if serial_port and serial_port.lower() == "auto":
+                serial_port = USBClient.find_port()
+                if serial_port is None:
+                    raise ConnectionError(
+                        "Auto-detecção falhou: nenhum Dobot encontrado nas portas seriais"
+                    )
+                logger.info(f"Porta auto-detectada: {serial_port}")
+            self.client = USBClient(serial_port or "auto", max_retries=max_retries)
+        elif self.mode == "serial":
+            if not serial_port:
+                raise ValueError("serial_port must be provided when mode='serial'")
+            resolved_port = serial_port
+            if serial_port.lower() == "auto":
+                resolved_port = USBClient.find_port()
+                if resolved_port is None:
+                    raise ConnectionError(
+                        "Auto-detecção falhou: nenhum Dobot encontrado nas portas seriais"
+                    )
+                logger.info(f"Porta auto-detectada: {resolved_port}")
+            self.client = USBClient(resolved_port, max_retries=max_retries)
+        else:
+            self.client = DobotClient(host, port, max_retries=max_retries)
 
         self.motion = Motion(self)
         self.dashboard = Dashboard(self)

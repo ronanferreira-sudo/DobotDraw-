@@ -1,5 +1,5 @@
 
-from dobot.constants import PTP_MOVJ, PTP_MOVL
+from dobot.constants import PTP_MOVJ, PTP_MOVL, HOME_X, HOME_Y, HOME_Z, HOME_R
 from dobot.motion import Motion
 
 
@@ -29,7 +29,7 @@ class TestMotion:
         motion.robot.command = fake_command
         result = await motion.home()
         assert result == "home_ok"
-        assert received == [("set_homecmd", {})]
+        assert received == [("set_ptpcmd", {"ptp_mode": PTP_MOVJ, "x": HOME_X, "y": HOME_Y, "z": HOME_Z, "r": HOME_R})]
 
     async def test_movj_uses_ptp_movj_constant(self, monkeypatch):
         motion = Motion(FakeRobot())
@@ -48,6 +48,7 @@ class TestMotion:
         assert received[0][1]["y"] == 200.0
         assert received[0][1]["z"] == 50.0
         assert received[0][1]["r"] == 30.0
+        assert received[0][1]["is_queued"] is True
 
     async def test_movl_uses_ptp_movl_constant(self, monkeypatch):
         motion = Motion(FakeRobot())
@@ -66,6 +67,7 @@ class TestMotion:
         assert received[0][1]["y"] == 200.0
         assert received[0][1]["z"] == 50.0
         assert received[0][1]["r"] == 30.0
+        assert received[0][1]["is_queued"] is True
 
     async def test_movj_default_r_value(self, monkeypatch):
         motion = Motion(FakeRobot())

@@ -1,7 +1,7 @@
 import logging
 from typing import Any
 
-from .constants import PTP_MOVJ, PTP_MOVL
+from .constants import PTP_MOVJ, PTP_MOVL, HOME_X, HOME_Y, HOME_Z, HOME_R
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,12 @@ class Motion:
         """Move o robô para a posição de home."""
         logger.info("Moving to home position")
         return await self.robot.command(
-            "set_homecmd"
+            "set_ptpcmd",
+            ptp_mode=PTP_MOVJ,
+            x=HOME_X,
+            y=HOME_Y,
+            z=HOME_Z,
+            r=HOME_R
         )
 
     async def movj(self, x: float, y: float, z: float, r: float = 0) -> Any:
@@ -35,7 +40,8 @@ class Motion:
             x=x,
             y=y,
             z=z,
-            r=r
+            r=r,
+            is_queued=True
         )
 
     async def movl(self, x: float, y: float, z: float, r: float = 0) -> Any:
@@ -54,5 +60,6 @@ class Motion:
             x=x,
             y=y,
             z=z,
-            r=r
+            r=r,
+            is_queued=True
         )

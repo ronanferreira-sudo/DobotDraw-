@@ -228,6 +228,12 @@ class DobotInterface:
         self.txt_log = tk.Text(frame, height=6, state="disabled", font=("Consolas", 8))
         self.txt_log.pack(fill="both", expand=True, padx=5, pady=5)
 
+    def _log(self, msg):
+        self.txt_log.config(state="normal")
+        self.txt_log.insert("end", msg + "\n")
+        self.txt_log.see("end")
+        self.txt_log.config(state="disabled")
+
     def _start_event_loop(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)

@@ -160,6 +160,13 @@ class DobotInterface:
         ttk.Button(save, text="Exportar JSON", command=self._export_points).pack(side="left", expand=True, fill="x", padx=2)
         ttk.Button(save, text="Limpar", command=self._clear_points).pack(side="left", expand=True, fill="x", padx=2)
 
+        pick_frame = ttk.Frame(frame)
+        pick_frame.pack(fill="x", padx=10, pady=(0, 8))
+
+        ttk.Button(pick_frame, text="Pegar e Entregar", command=self._pick_and_place).pack(
+            side="left", expand=True, fill="x", padx=2
+        )
+
         list_frame = ttk.Frame(frame)
         list_frame.pack(fill="both", expand=True, padx=10, pady=(0, 8))
 
@@ -418,10 +425,11 @@ class DobotInterface:
     async def _async_read_pose(self):
         try:
             pose = await self.robot.dashboard.get_pose()
-            self.root.after(0, lambda: self.lbl_pose.config(text=f"Pose: {pose}"))
-            self.root.after(0, lambda: self._log(f"Pose: {pose}"))
+            pose_str = str(pose)
+            self.root.after(0, lambda ps=pose_str: self.lbl_pose.config(text=f"Pose: {ps}"))
+            self.root.after(0, lambda ps=pose_str: self._log(f"Pose: {ps}"))
         except Exception as e:
-            self.root.after(0, lambda: self._log(f"[ERRO] {e}"))
+            self.root.after(0, lambda err=e: self._log(f"[ERRO] Ler Pose: {err}"))
 
     def _save_point(self):
         self._run(self._async_save_point())
@@ -457,6 +465,39 @@ class DobotInterface:
         self.saved_points.clear()
         self.list_points.delete(0, "end")
         self._log("Coordenadas limpas")
+
+    def _pick_and_place(self):
+        if len(self.saved_points) < 2:
+            messagebox.showwarning("Aviso", "Salve pelo menos 2 coordenadas:\n1ª = pegar | 2ª = entregar")
+            return
+        self._run(self._async_pick_and_place())
+
+    async def _async_pick_and_place(self):
+        try:
+            pick = self.saved_points[0]
+            place = self.saved_points[1]
+
+            px, py, pz = float(pick[0]), float(pick[1]), float(pick[2])
+            qx, qy, qz = float(place[0]), float(place[1]), float(place[2])
+
+            self._log(f"Pegar em: ({px:.1f}, {py:.1f}, {pz:.1f})")
+            await self.robot.motion.movj(px, py, pz, 0)
+            await asyncio.sleep(0.5)
+
+            self._log("Ligando sucção...")
+            await self.robot.tool.suction(True)
+            await asyncio.sleep(0.5)
+
+            self._log(f"Entregar em: ({qx:.1f}, {qy:.1f}, {qz:.1f})")
+            await self.robot.motion.movj(qx, qy, qz, 0)
+            await asyncio.sleep(0.5)
+
+            self._log("Desligando sucção...")
+            await self.robot.tool.suction(False)
+
+            self._log("Pick and place finalizado")
+        except Exception as e:
+            self._log(f"[ERRO] Pick and place: {e}")
 
     def _start_canvas(self):
         self._run(self.robot.canvas.start(speed=100, acceleration=100))

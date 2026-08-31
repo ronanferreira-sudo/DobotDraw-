@@ -46,8 +46,8 @@ class DobotInterface:
 
         self.root = tk.Tk()
         self.root.title("DobotDraw")
-        self.root.geometry("560x720")
-        self.root.minsize(520, 600)
+        self.root.geometry("700x850")
+        self.root.minsize(600, 700)
         self.root.resizable(True, True)
 
         self._build_ui()
@@ -58,8 +58,9 @@ class DobotInterface:
         style.configure("TLabelFrame", padding=8)
         style.configure("TButton", padding=6)
 
-        main = ttk.Frame(self.root)
-        main.pack(fill="both", expand=True, padx=10, pady=10)
+        scroll_container = ScrollableFrame(self.root)
+        scroll_container.pack(fill="both", expand=True, padx=10, pady=10)
+        main = scroll_container.scrollable
 
         self._build_connection(main)
         self._build_operation_mode(main)

@@ -13,7 +13,7 @@ class Motion:
         self.robot = robot
 
     async def home(self) -> Any:
-        """Move o robô para a posição de home."""
+        """Move o robô para a posição de home (posição segura elevada)."""
         logger.info("Moving to home position")
         return await self.robot.command(
             "set_ptpcmd",
@@ -21,7 +21,8 @@ class Motion:
             x=HOME_X,
             y=HOME_Y,
             z=HOME_Z,
-            r=HOME_R
+            r=HOME_R,
+            is_queued=True
         )
 
     async def movj(self, x: float, y: float, z: float, r: float = 0) -> Any:

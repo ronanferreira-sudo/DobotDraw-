@@ -387,13 +387,30 @@ class DobotInterface:
         except ValueError:
             messagebox.showerror("Erro", "Passo deve ser numerico")
             return
+        self._run(self._async_jog(axis, direction, step))
 
-        self._run(self.robot.motion.movj(
-            x=step if axis == "x" else 0,
-            y=step if axis == "y" else 0,
-            z=step if axis == "z" else 0,
-            r=step if axis == "r" else 0,
-        ))
+    async def _async_jog(self, axis, direction, step):
+        try:
+            pose = await self.robot.dashboard.get_pose()
+            if not pose or len(pose) < 4:
+                self._log("[ERRO] Pose invalida para JOG")
+                return
+
+            x, y, z, r = pose[0], pose[1], pose[2], pose[3]
+
+            if axis == "x":
+                x += step * direction
+            elif axis == "y":
+                y += step * direction
+            elif axis == "z":
+                z += step * direction
+            elif axis == "r":
+                r += step * direction
+
+            await self.robot.motion.movj(x, y, z, r)
+            self._log(f"JOG {axis.upper()} {direction:+}: ({x:.1f}, {y:.1f}, {z:.1f}, r={r:.1f})")
+        except Exception as e:
+            self._log(f"[ERRO] JOG: {e}")
 
     def _read_pose(self):
         self._run(self._async_read_pose())

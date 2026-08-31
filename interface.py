@@ -139,73 +139,91 @@ class DobotInterface:
         ttk.Button(jog, text="-R", command=lambda: self._jog("r", -1), **btn_opts).grid(row=3, column=3, padx=3, pady=3)
 
         tools = ttk.Frame(frame)
-        tools.pack(fill="x", pady=5)
+        tools.pack(fill="x", padx=10, pady=(0, 8))
 
         self.btn_abrir_garra = ttk.Button(tools, text="Abrir Garra", command=lambda: self._run(self.robot.tool.gripper(False)))
-        self.btn_abrir_garra.pack(side="left", expand=True, fill="x", padx=3)
-        
+        self.btn_abrir_garra.pack(side="left", expand=True, fill="x", padx=2)
+
         self.btn_fechar_garra = ttk.Button(tools, text="Fechar Garra", command=lambda: self._run(self.robot.tool.gripper(True)))
-        self.btn_fechar_garra.pack(side="left", expand=True, fill="x", padx=3)
-        
+        self.btn_fechar_garra.pack(side="left", expand=True, fill="x", padx=2)
+
         self.btn_sucao_on = ttk.Button(tools, text="Sucao ON", command=lambda: self._run(self.robot.tool.suction(True)))
-        self.btn_sucao_on.pack(side="left", expand=True, fill="x", padx=3)
-        
+        self.btn_sucao_on.pack(side="left", expand=True, fill="x", padx=2)
+
         self.btn_sucao_off = ttk.Button(tools, text="Sucao OFF", command=lambda: self._run(self.robot.tool.suction(False)))
-        self.btn_sucao_off.pack(side="left", expand=True, fill="x", padx=3)
+        self.btn_sucao_off.pack(side="left", expand=True, fill="x", padx=2)
 
-        bottom = ttk.Frame(frame)
-        bottom.pack(fill="x", pady=5)
+        save = ttk.Frame(frame)
+        save.pack(fill="x", padx=10, pady=(0, 8))
 
-        ttk.Button(bottom, text="Salvar Coordenada", command=self._save_point).pack(side="left", expand=True, fill="x", padx=3)
-        ttk.Button(bottom, text="Exportar JSON", command=self._export_points).pack(side="left", expand=True, fill="x", padx=3)
-        ttk.Button(bottom, text="Limpar", command=self._clear_points).pack(side="left", expand=True, fill="x", padx=3)
+        ttk.Button(save, text="Salvar Coordenada", command=self._save_point).pack(side="left", expand=True, fill="x", padx=2)
+        ttk.Button(save, text="Exportar JSON", command=self._export_points).pack(side="left", expand=True, fill="x", padx=2)
+        ttk.Button(save, text="Limpar", command=self._clear_points).pack(side="left", expand=True, fill="x", padx=2)
 
         list_frame = ttk.Frame(frame)
         list_frame.pack(fill="both", expand=True, padx=10, pady=(0, 8))
 
-        self.list_points = tk.Listbox(list_frame, height=4)
+        self.list_points = tk.Listbox(list_frame, height=5)
         self.list_points.pack(side="left", fill="both", expand=True)
 
         scrollbar_points = ttk.Scrollbar(list_frame, orient="vertical", command=self.list_points.yview)
         scrollbar_points.pack(side="right", fill="y")
         self.list_points.config(yscrollcommand=scrollbar_points.set)
 
-        self.lbl_pose = ttk.Label(frame, text="Pose: --", font=("Consolas", 9))
+        self.lbl_pose = ttk.Label(frame, text="Pose: --")
         self.lbl_pose.pack(padx=10, pady=(0, 8))
 
     def _build_motion(self, parent):
         frame = ttk.LabelFrame(parent, text="Movimento")
         frame.pack(fill="x", pady=5)
 
-        ttk.Button(frame, text="Home", command=lambda: self._run(self.robot.motion.home())).pack(side="left", expand=True, fill="x", padx=10, pady=8)
-        ttk.Button(frame, text="Parar Fila", command=lambda: self._run(self.robot.queue.stop())).pack(side="left", expand=True, fill="x", padx=10, pady=8)
+        ttk.Button(frame, text="Home", command=lambda: self._run(self.robot.motion.home())).pack(
+            side="left", expand=True, fill="x", padx=5, pady=5
+        )
+        ttk.Button(frame, text="Parar Fila", command=lambda: self._run(self.robot.queue.stop())).pack(
+            side="left", expand=True, fill="x", padx=5, pady=5
+        )
 
     def _build_canvas(self, parent):
         self.frame_canvas = ttk.LabelFrame(parent, text="Desenho Continuo")
         self.frame_canvas.pack(fill="x", pady=5)
 
-        coords = ttk.Frame(self.frame_canvas)
-        coords.pack(fill="x", padx=10, pady=8)
+        frame = self.frame_canvas
+        frame_cmd = ttk.Frame(frame)
+        frame_cmd.pack(fill="x", padx=5, pady=5)
 
-        entries = {}
-        for i, label in enumerate(["X:", "Y:", "Z:", "R:"]):
-            ttk.Label(coords, text=label).grid(row=0, column=i*2, padx=(5, 2), pady=5)
-            entry = ttk.Entry(coords, width=8)
-            entry.insert(0, ["200", "0", "0", "0"][i])
-            entry.grid(row=0, column=i*2+1, padx=(2, 10), pady=5)
-            entries[label[0].lower()] = entry
+        ttk.Label(frame_cmd, text="X:").pack(side="left")
+        self.entry_x = ttk.Entry(frame_cmd, width=8)
+        self.entry_x.insert(0, "200")
+        self.entry_x.pack(side="left", padx=2)
 
-        self.entry_x = entries["x"]
-        self.entry_y = entries["y"]
-        self.entry_z = entries["z"]
-        self.entry_r = entries["r"]
+        ttk.Label(frame_cmd, text="Y:").pack(side="left")
+        self.entry_y = ttk.Entry(frame_cmd, width=8)
+        self.entry_y.insert(0, "0")
+        self.entry_y.pack(side="left", padx=2)
 
-        btns = ttk.Frame(self.frame_canvas)
-        btns.pack(fill="x", padx=10, pady=(0, 8))
+        ttk.Label(frame_cmd, text="Z:").pack(side="left")
+        self.entry_z = ttk.Entry(frame_cmd, width=8)
+        self.entry_z.insert(0, "0")
+        self.entry_z.pack(side="left", padx=2)
 
-        ttk.Button(btns, text="Iniciar CP", command=self._start_canvas).pack(side="left", expand=True, fill="x", padx=3)
-        ttk.Button(btns, text="Linha", command=self._line).pack(side="left", expand=True, fill="x", padx=3)
-        ttk.Button(btns, text="Parar CP", command=lambda: self._run(self.robot.canvas.stop())).pack(side="left", expand=True, fill="x", padx=3)
+        ttk.Label(frame_cmd, text="R:").pack(side="left")
+        self.entry_r = ttk.Entry(frame_cmd, width=8)
+        self.entry_r.insert(0, "0")
+        self.entry_r.pack(side="left", padx=2)
+
+        frame_buttons = ttk.Frame(frame)
+        frame_buttons.pack(fill="x", padx=5, pady=5)
+
+        ttk.Button(frame_buttons, text="Iniciar CP", command=self._start_canvas).pack(
+            side="left", expand=True, fill="x", padx=2
+        )
+        ttk.Button(frame_buttons, text="Linha", command=self._line).pack(
+            side="left", expand=True, fill="x", padx=2
+        )
+        ttk.Button(frame_buttons, text="Parar CP", command=lambda: self._run(self.robot.canvas.stop())).pack(
+            side="left", expand=True, fill="x", padx=2
+        )
 
     def _build_shapes(self, parent):
         self.frame_shapes = ttk.LabelFrame(parent, text="Formas")
@@ -254,7 +272,7 @@ class DobotInterface:
 
     def _toggle_mode(self):
         mode = self.mode_var.get()
-        if mode == "serial":
+        if mode == "usb" or mode == "serial":
             self.combo_port.config(state="readonly")
             self._refresh_ports()
         else:
@@ -289,7 +307,6 @@ class DobotInterface:
             widget.config(state=state)
         except Exception:
             pass
-            pass
         for child in widget.winfo_children():
             self._set_widgets_state(child, state)
 
@@ -304,6 +321,7 @@ class DobotInterface:
             self.combo_port.set(values[0])
 
     def _toggle_connection(self):
+        self._ui_queue.put(lambda msg=f"Botao conectar clicado. robot={self.robot}": self._log(msg))
         if self.robot is None:
             mode = self.mode_var.get()
             port = self.combo_port.get().strip()
@@ -314,11 +332,13 @@ class DobotInterface:
 
     def _connect(self, mode, port):
         try:
-            self._log(f"Tentando conectar: mode={mode}, port={port}")
+            self._ui_queue.put(lambda msg=f"Tentando conectar: mode={mode}, port={port}": self._log(msg))
             if mode == "usb":
                 if not port or port == "Auto":
+                    self._ui_queue.put(lambda msg="Criando Robot(mode='usb', serial_port='auto')": self._log(msg))
                     self.robot = Robot(mode="usb", serial_port="auto")
                 else:
+                    self._ui_queue.put(lambda msg=f"Criando Robot(mode='usb', serial_port='{port}')": self._log(msg))
                     self.robot = Robot(mode="usb", serial_port=port)
             elif mode == "serial":
                 if not port or port == "Auto":
@@ -328,15 +348,18 @@ class DobotInterface:
             else:
                 self.robot = Robot(mode="websocket")
 
-            self._log("Enviando comando connect()...")
+            self._ui_queue.put(lambda msg="Enviando comando connect()...": self._log(msg))
             fut = asyncio.run_coroutine_threadsafe(self.robot.connect(), self.loop)
             fut.result()
-            self._log("Conexão estabelecida com sucesso")
+            self._ui_queue.put(lambda msg="Conexão estabelecida com sucesso": self._log(msg))
             self._ui_queue.put(self._on_connect_success)
         except Exception as e:
             self.robot = None
-            self._log(f"FALHA NA CONEXÃO: {type(e).__name__}: {e}")
-            self._ui_queue.put(lambda: self._on_connect_error(e))
+            import traceback
+            tb = traceback.format_exc()
+            self._ui_queue.put(lambda msg=f"FALHA NA CONEXÃO: {type(e).__name__}: {e}": self._log(msg))
+            self._ui_queue.put(lambda msg=f"TRACEBACK: {tb}": self._log(msg))
+            self._ui_queue.put(lambda error=e: self._on_connect_error(error))
 
     def _on_connect_success(self):
         self.lbl_status.config(text="Conectado", foreground="green")
@@ -347,11 +370,11 @@ class DobotInterface:
         messagebox.showerror("Erro de Conexao", f"Falha ao conectar:\n{type(error).__name__}: {error}")
 
     def _disconnect(self):
+        self._ui_queue.put(lambda msg="Desconectando...": self._log(msg))
         try:
             fut = asyncio.run_coroutine_threadsafe(self.robot.disconnect(), self.loop)
             fut.result()
         except Exception:
-            pass
             pass
         finally:
             self.robot = None
@@ -378,10 +401,10 @@ class DobotInterface:
     async def _async_read_pose(self):
         try:
             pose = await self.robot.dashboard.get_pose()
-            self.lbl_pose.config(text=f"Pose: {pose}")
-        except Exception:
-            pass
-            pass
+            self.root.after(0, lambda: self.lbl_pose.config(text=f"Pose: {pose}"))
+            self.root.after(0, lambda: self._log(f"Pose: {pose}"))
+        except Exception as e:
+            self.root.after(0, lambda: self._log(f"[ERRO] {e}"))
 
     def _save_point(self):
         self._run(self._async_save_point())
@@ -390,10 +413,10 @@ class DobotInterface:
         try:
             pose = await self.robot.dashboard.get_pose()
             self.saved_points.append(pose)
-            self.list_points.insert("end", str(pose))
-        except Exception:
-            pass
-            pass
+            self.root.after(0, lambda: self.list_points.insert("end", str(pose)))
+            self.root.after(0, lambda: self._log(f"Salvo: {pose}"))
+        except Exception as e:
+            self.root.after(0, lambda: self._log(f"[ERRO] {e}"))
 
     def _export_points(self):
         if not self.saved_points:
@@ -409,15 +432,18 @@ class DobotInterface:
             try:
                 with open(file_path, "w") as f:
                     json.dump(self.saved_points, f, indent=2)
-            except Exception:
-                pass
+                self._log(f"Exportado: {file_path}")
+            except Exception as e:
+                self._log(f"[ERRO] {e}")
 
     def _clear_points(self):
         self.saved_points.clear()
         self.list_points.delete(0, "end")
+        self._log("Coordenadas limpas")
 
     def _start_canvas(self):
         self._run(self.robot.canvas.start(speed=100, acceleration=100))
+        self._log("CP iniciado")
 
     def _line(self):
         try:
@@ -429,25 +455,25 @@ class DobotInterface:
             messagebox.showerror("Erro", "X/Y/Z/R devem ser numeros")
             return
         self._run(self.robot.canvas.line(x, y, z, r))
+        self._log(f"Linha para ({x}, {y}, {z}, r={r})")
 
     def _square(self):
         self._run(self.robot.drawer.draw_square(100, 100, 50, z=0))
+        self._log("Desenhando quadrado 50mm")
 
     def _circle(self):
         self._run(self.robot.drawer.draw_circle(200, 200, 30, z=0))
+        self._log("Desenhando circulo 30mm")
 
     def run(self):
-        print('DEBUG run: iniciando')
         self.thread = threading.Thread(target=self._start_event_loop, daemon=True)
         self.thread.start()
         self._process_ui_queue()
-        print('DEBUG run: _process_ui_queue iniciado')
         self.root.mainloop()
 
     def _process_ui_queue(self):
         try:
             action = self._ui_queue.get_nowait()
-            print(f'DEBUG: Executando ação da fila')
             action()
         except queue.Empty:
             pass

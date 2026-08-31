@@ -9,7 +9,7 @@ from .end_effector import EndEffector
 from .io import IO
 from .motion import Motion
 from .queue import Queue
-from .serial_client import USBClient
+from .usb_client import USBClient
 
 logger = logging.getLogger(__name__)
 

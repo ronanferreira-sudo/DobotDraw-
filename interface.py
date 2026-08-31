@@ -268,7 +268,7 @@ class DobotInterface:
         try:
             await coro
         except Exception as e:
-            self.root.after(0, lambda: messagebox.showerror("Erro", f"{type(e).__name__}: {e}"))
+            self.root.after(0, lambda error=e: messagebox.showerror("Erro", f"{type(error).__name__}: {error}"))
 
     def _toggle_mode(self):
         mode = self.mode_var.get()

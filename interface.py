@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import queue
 import serial.tools.list_ports
 import threading
 import tkinter as tk
@@ -42,16 +41,11 @@ class DobotInterface:
         self.thread = None
         self.running = False
         self.saved_points = []
-        self._ui_queue = queue.Queue()
-        self._jog_active = False
-        self._jog_axis = None
-        self._jog_direction = 0
-        self._jog_job = None
 
         self.root = tk.Tk()
         self.root.title("DobotDraw")
-        self.root.geometry("700x850")
-        self.root.minsize(600, 700)
+        self.root.geometry("620x750")
+        self.root.minsize(580, 650)
         self.root.resizable(True, True)
 
         self._build_ui()
@@ -73,7 +67,6 @@ class DobotInterface:
         self._build_canvas(main)
         self._build_shapes(main)
         self._build_io(main)
-        self._build_log(main)
         self._update_operation_mode()
 
     def _build_connection(self, parent):
@@ -134,42 +127,14 @@ class DobotInterface:
         jog.pack(pady=5)
 
         btn_opts = {"width": 6, "padding": 4}
-
-        def jog_bind(btn, axis, direction):
-            btn.bind('<ButtonPress-1>', lambda e: self._start_jog(axis, direction))
-            btn.bind('<ButtonRelease-1>', lambda e: self._stop_jog())
-
-        b_xp = ttk.Button(jog, text="+X", **btn_opts)
-        jog_bind(b_xp, "x", 1)
-        b_xp.grid(row=0, column=1, padx=3, pady=3)
-
-        b_xn = ttk.Button(jog, text="-X", **btn_opts)
-        jog_bind(b_xn, "x", -1)
-        b_xn.grid(row=0, column=3, padx=3, pady=3)
-
-        b_yp = ttk.Button(jog, text="+Y", **btn_opts)
-        jog_bind(b_yp, "y", 1)
-        b_yp.grid(row=1, column=0, padx=3, pady=3)
-
-        b_yn = ttk.Button(jog, text="-Y", **btn_opts)
-        jog_bind(b_yn, "y", -1)
-        b_yn.grid(row=1, column=4, padx=3, pady=3)
-
-        b_zp = ttk.Button(jog, text="+Z", **btn_opts)
-        jog_bind(b_zp, "z", 1)
-        b_zp.grid(row=2, column=1, padx=3, pady=3)
-
-        b_zn = ttk.Button(jog, text="-Z", **btn_opts)
-        jog_bind(b_zn, "z", -1)
-        b_zn.grid(row=2, column=3, padx=3, pady=3)
-
-        b_rp = ttk.Button(jog, text="+R", **btn_opts)
-        jog_bind(b_rp, "r", 1)
-        b_rp.grid(row=3, column=1, padx=3, pady=3)
-
-        b_rn = ttk.Button(jog, text="-R", **btn_opts)
-        jog_bind(b_rn, "r", -1)
-        b_rn.grid(row=3, column=3, padx=3, pady=3)
+        ttk.Button(jog, text="+X", command=lambda: self._jog("x", 1), **btn_opts).grid(row=0, column=1, padx=3, pady=3)
+        ttk.Button(jog, text="-X", command=lambda: self._jog("x", -1), **btn_opts).grid(row=0, column=3, padx=3, pady=3)
+        ttk.Button(jog, text="+Y", command=lambda: self._jog("y", 1), **btn_opts).grid(row=1, column=0, padx=3, pady=3)
+        ttk.Button(jog, text="-Y", command=lambda: self._jog("y", -1), **btn_opts).grid(row=1, column=4, padx=3, pady=3)
+        ttk.Button(jog, text="+Z", command=lambda: self._jog("z", 1), **btn_opts).grid(row=2, column=1, padx=3, pady=3)
+        ttk.Button(jog, text="-Z", command=lambda: self._jog("z", -1), **btn_opts).grid(row=2, column=3, padx=3, pady=3)
+        ttk.Button(jog, text="+R", command=lambda: self._jog("r", 1), **btn_opts).grid(row=3, column=1, padx=3, pady=3)
+        ttk.Button(jog, text="-R", command=lambda: self._jog("r", -1), **btn_opts).grid(row=3, column=3, padx=3, pady=3)
 
         tools = ttk.Frame(frame)
         tools.pack(fill="x", padx=10, pady=(0, 8))
@@ -279,24 +244,14 @@ class DobotInterface:
         ttk.Button(frame, text="Ligar Saida 0", command=lambda: self._run(self.robot.io.do(0, 1))).pack(side="left", expand=True, fill="x", padx=10, pady=8)
         ttk.Button(frame, text="Desligar Saida 0", command=lambda: self._run(self.robot.io.do(0, 0))).pack(side="left", expand=True, fill="x", padx=10, pady=8)
 
-    def _build_log(self, parent):
-        frame = ttk.LabelFrame(parent, text="Log")
-        frame.pack(fill="both", expand=True, pady=5)
-
-        self.txt_log = tk.Text(frame, height=6, state="disabled", font=("Consolas", 8))
-        self.txt_log.pack(fill="both", expand=True, padx=5, pady=5)
-
-    def _log(self, msg):
-        self.txt_log.config(state="normal")
-        self.txt_log.insert("end", msg + "\n")
-        self.txt_log.see("end")
-        self.txt_log.config(state="disabled")
-
     def _start_event_loop(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
         self.running = True
         self.loop.run_forever()
+
+    def _log(self, msg):
+        print(msg)
 
     def _run(self, coro):
         if self.loop is None or not self.running:
@@ -361,7 +316,7 @@ class DobotInterface:
             self.combo_port.set(values[0])
 
     def _toggle_connection(self):
-        self._ui_queue.put(lambda msg=f"Botao conectar clicado. robot={self.robot}": self._log(msg))
+        self._log(f"Botao conectar clicado. robot={self.robot}")
         if self.robot is None:
             mode = self.mode_var.get()
             port = self.combo_port.get().strip()
@@ -372,13 +327,13 @@ class DobotInterface:
 
     def _connect(self, mode, port):
         try:
-            self._ui_queue.put(lambda msg=f"Tentando conectar: mode={mode}, port={port}": self._log(msg))
+            self._log(f"Tentando conectar: mode={mode}, port={port}")
             if mode == "usb":
                 if not port or port == "Auto":
-                    self._ui_queue.put(lambda msg="Criando Robot(mode='usb', serial_port='auto')": self._log(msg))
+                    self._log("Criando Robot(mode='usb', serial_port='auto')")
                     self.robot = Robot(mode="usb", serial_port="auto")
                 else:
-                    self._ui_queue.put(lambda msg=f"Criando Robot(mode='usb', serial_port='{port}')": self._log(msg))
+                    self._log(f"Criando Robot(mode='usb', serial_port='{port}')")
                     self.robot = Robot(mode="usb", serial_port=port)
             elif mode == "serial":
                 if not port or port == "Auto":
@@ -388,18 +343,18 @@ class DobotInterface:
             else:
                 self.robot = Robot(mode="websocket")
 
-            self._ui_queue.put(lambda msg="Enviando comando connect()...": self._log(msg))
+            self._log("Enviando comando connect()...")
             fut = asyncio.run_coroutine_threadsafe(self.robot.connect(), self.loop)
             fut.result()
-            self._ui_queue.put(lambda msg="Conexão estabelecida com sucesso": self._log(msg))
-            self._ui_queue.put(self._on_connect_success)
+            self._log("Conexão estabelecida com sucesso")
+            self.root.after(0, self._on_connect_success)
         except Exception as e:
             self.robot = None
             import traceback
             tb = traceback.format_exc()
-            self._ui_queue.put(lambda msg=f"FALHA NA CONEXÃO: {type(e).__name__}: {e}": self._log(msg))
-            self._ui_queue.put(lambda msg=f"TRACEBACK: {tb}": self._log(msg))
-            self._ui_queue.put(lambda error=e: self._on_connect_error(error))
+            self._log(f"FALHA NA CONEXÃO: {type(e).__name__}: {e}")
+            self._log(f"TRACEBACK: {tb}")
+            self.root.after(0, lambda error=e: self._on_connect_error(error))
 
     def _on_connect_success(self):
         self.lbl_status.config(text="Conectado", foreground="green")
@@ -410,7 +365,7 @@ class DobotInterface:
         messagebox.showerror("Erro de Conexao", f"Falha ao conectar:\n{type(error).__name__}: {error}")
 
     def _disconnect(self):
-        self._ui_queue.put(lambda msg="Desconectando...": self._log(msg))
+        self._log("Desconectando...")
         try:
             fut = asyncio.run_coroutine_threadsafe(self.robot.disconnect(), self.loop)
             fut.result()
@@ -497,10 +452,10 @@ class DobotInterface:
         try:
             pose = await self.robot.dashboard.get_pose()
             self.saved_points.append(pose)
-            self.root.after(0, lambda: self.list_points.insert("end", str(pose)))
-            self.root.after(0, lambda: self._log(f"Salvo: {pose}"))
+            self._log(f"Salvo: {pose}")
+            self.root.after(0, lambda ps=str(pose): self.list_points.insert("end", ps))
         except Exception as e:
-            self.root.after(0, lambda: self._log(f"[ERRO] {e}"))
+            self._log(f"[ERRO] {e}")
 
     def _export_points(self):
         if not self.saved_points:
@@ -585,16 +540,8 @@ class DobotInterface:
     def run(self):
         self.thread = threading.Thread(target=self._start_event_loop, daemon=True)
         self.thread.start()
-        self._process_ui_queue()
         self.root.mainloop()
 
-    def _process_ui_queue(self):
-        try:
-            action = self._ui_queue.get_nowait()
-            action()
-        except queue.Empty:
-            pass
-        self.root.after(50, self._process_ui_queue)
 
 
 def main():

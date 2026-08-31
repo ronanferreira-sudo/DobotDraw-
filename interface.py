@@ -139,14 +139,37 @@ class DobotInterface:
             btn.bind('<ButtonPress-1>', lambda e: self._start_jog(axis, direction))
             btn.bind('<ButtonRelease-1>', lambda e: self._stop_jog())
 
-        jog_bind(ttk.Button(jog, text="+X", **btn_opts), "x", 1).grid(row=0, column=1, padx=3, pady=3)
-        jog_bind(ttk.Button(jog, text="-X", **btn_opts), "x", -1).grid(row=0, column=3, padx=3, pady=3)
-        jog_bind(ttk.Button(jog, text="+Y", **btn_opts), "y", 1).grid(row=1, column=0, padx=3, pady=3)
-        jog_bind(ttk.Button(jog, text="-Y", **btn_opts), "y", -1).grid(row=1, column=4, padx=3, pady=3)
-        jog_bind(ttk.Button(jog, text="+Z", **btn_opts), "z", 1).grid(row=2, column=1, padx=3, pady=3)
-        jog_bind(ttk.Button(jog, text="-Z", **btn_opts), "z", -1).grid(row=2, column=3, padx=3, pady=3)
-        jog_bind(ttk.Button(jog, text="+R", **btn_opts), "r", 1).grid(row=3, column=1, padx=3, pady=3)
-        jog_bind(ttk.Button(jog, text="-R", **btn_opts), "r", -1).grid(row=3, column=3, padx=3, pady=3)
+        b_xp = ttk.Button(jog, text="+X", **btn_opts)
+        jog_bind(b_xp, "x", 1)
+        b_xp.grid(row=0, column=1, padx=3, pady=3)
+
+        b_xn = ttk.Button(jog, text="-X", **btn_opts)
+        jog_bind(b_xn, "x", -1)
+        b_xn.grid(row=0, column=3, padx=3, pady=3)
+
+        b_yp = ttk.Button(jog, text="+Y", **btn_opts)
+        jog_bind(b_yp, "y", 1)
+        b_yp.grid(row=1, column=0, padx=3, pady=3)
+
+        b_yn = ttk.Button(jog, text="-Y", **btn_opts)
+        jog_bind(b_yn, "y", -1)
+        b_yn.grid(row=1, column=4, padx=3, pady=3)
+
+        b_zp = ttk.Button(jog, text="+Z", **btn_opts)
+        jog_bind(b_zp, "z", 1)
+        b_zp.grid(row=2, column=1, padx=3, pady=3)
+
+        b_zn = ttk.Button(jog, text="-Z", **btn_opts)
+        jog_bind(b_zn, "z", -1)
+        b_zn.grid(row=2, column=3, padx=3, pady=3)
+
+        b_rp = ttk.Button(jog, text="+R", **btn_opts)
+        jog_bind(b_rp, "r", 1)
+        b_rp.grid(row=3, column=1, padx=3, pady=3)
+
+        b_rn = ttk.Button(jog, text="-R", **btn_opts)
+        jog_bind(b_rn, "r", -1)
+        b_rn.grid(row=3, column=3, padx=3, pady=3)
 
         tools = ttk.Frame(frame)
         tools.pack(fill="x", padx=10, pady=(0, 8))

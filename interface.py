@@ -43,6 +43,10 @@ class DobotInterface:
         self.running = False
         self.saved_points = []
         self._ui_queue = queue.Queue()
+        self._jog_active = False
+        self._jog_axis = None
+        self._jog_direction = 0
+        self._jog_job = None
 
         self.root = tk.Tk()
         self.root.title("DobotDraw")
@@ -130,14 +134,19 @@ class DobotInterface:
         jog.pack(pady=5)
 
         btn_opts = {"width": 6, "padding": 4}
-        ttk.Button(jog, text="+X", command=lambda: self._jog("x", 1), **btn_opts).grid(row=0, column=1, padx=3, pady=3)
-        ttk.Button(jog, text="-X", command=lambda: self._jog("x", -1), **btn_opts).grid(row=0, column=3, padx=3, pady=3)
-        ttk.Button(jog, text="+Y", command=lambda: self._jog("y", 1), **btn_opts).grid(row=1, column=0, padx=3, pady=3)
-        ttk.Button(jog, text="-Y", command=lambda: self._jog("y", -1), **btn_opts).grid(row=1, column=4, padx=3, pady=3)
-        ttk.Button(jog, text="+Z", command=lambda: self._jog("z", 1), **btn_opts).grid(row=2, column=1, padx=3, pady=3)
-        ttk.Button(jog, text="-Z", command=lambda: self._jog("z", -1), **btn_opts).grid(row=2, column=3, padx=3, pady=3)
-        ttk.Button(jog, text="+R", command=lambda: self._jog("r", 1), **btn_opts).grid(row=3, column=1, padx=3, pady=3)
-        ttk.Button(jog, text="-R", command=lambda: self._jog("r", -1), **btn_opts).grid(row=3, column=3, padx=3, pady=3)
+
+        def jog_bind(btn, axis, direction):
+            btn.bind('<ButtonPress-1>', lambda e: self._start_jog(axis, direction))
+            btn.bind('<ButtonRelease-1>', lambda e: self._stop_jog())
+
+        jog_bind(ttk.Button(jog, text="+X", **btn_opts), "x", 1).grid(row=0, column=1, padx=3, pady=3)
+        jog_bind(ttk.Button(jog, text="-X", **btn_opts), "x", -1).grid(row=0, column=3, padx=3, pady=3)
+        jog_bind(ttk.Button(jog, text="+Y", **btn_opts), "y", 1).grid(row=1, column=0, padx=3, pady=3)
+        jog_bind(ttk.Button(jog, text="-Y", **btn_opts), "y", -1).grid(row=1, column=4, padx=3, pady=3)
+        jog_bind(ttk.Button(jog, text="+Z", **btn_opts), "z", 1).grid(row=2, column=1, padx=3, pady=3)
+        jog_bind(ttk.Button(jog, text="-Z", **btn_opts), "z", -1).grid(row=2, column=3, padx=3, pady=3)
+        jog_bind(ttk.Button(jog, text="+R", **btn_opts), "r", 1).grid(row=3, column=1, padx=3, pady=3)
+        jog_bind(ttk.Button(jog, text="-R", **btn_opts), "r", -1).grid(row=3, column=3, padx=3, pady=3)
 
         tools = ttk.Frame(frame)
         tools.pack(fill="x", padx=10, pady=(0, 8))
@@ -389,13 +398,39 @@ class DobotInterface:
             self.lbl_status.config(text="Desconectado", foreground="red")
             self.btn_connect.config(text="Conectar")
 
-    def _jog(self, axis, direction):
+    def _start_jog(self, axis, direction):
+        if self.robot is None:
+            return
+        self._jog_active = True
+        self._jog_axis = axis
+        self._jog_direction = direction
+        self._repeat_jog()
+
+    def _stop_jog(self):
+        self._jog_active = False
+        self._jog_axis = None
+        self._jog_direction = 0
+        if self._jog_job is not None:
+            self.root.after_cancel(self._jog_job)
+            self._jog_job = None
+
+    def _repeat_jog(self):
+        if not self._jog_active or self._jog_axis is None:
+            return
         try:
             step = float(self.entry_step.get())
         except ValueError:
-            messagebox.showerror("Erro", "Passo deve ser numerico")
             return
+        axis = self._jog_axis
+        direction = self._jog_direction
         self._run(self._async_jog(axis, direction, step))
+        self._jog_job = self.root.after(120, self._repeat_jog)
+
+    def _jog(self, axis, direction):
+        if self.robot is None:
+            messagebox.showwarning("Aviso", "Conecte o robô primeiro")
+            return
+        self._run(self._async_jog(axis, direction, float(self.entry_step.get())))
 
     async def _async_jog(self, axis, direction, step):
         try:
